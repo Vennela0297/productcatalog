@@ -35,14 +35,22 @@ type Product struct {
 	Category string  `json:"category"`
 }
 
-// Inventory struct, it will manages a collection of products.
+// Inventory struct, it will manage a collection of products.
 type Inventory struct {
 	Products map[int]Product
 }
 
 // MemoryStorage struct - uses a map to store products in memory.
 type MemoryStorage struct {
+	sync.Mutex
 	Products map[int]Product
+}
+
+// NewMemoryStorage - Constructor for MemoryStorage
+func NewMemoryStorage() *MemoryStorage {
+	return &MemoryStorage{
+		Products: make(map[int]Product),
+	}
 }
 
 // ExternalAPI struct
@@ -50,9 +58,17 @@ type ExternalAPI struct {
 	BaseURL string
 }
 
-// MockDatabaseStorage struct - simulates a database interactions with random delays.
+// MockDatabaseStorage struct - simulates database interactions with random delays.
 type MockDatabaseStorage struct {
+	sync.Mutex
 	store map[int]Product
+}
+
+// NewMockDatabaseStorage - Constructor for MockDatabaseStorage
+func NewMockDatabaseStorage() *MockDatabaseStorage {
+	return &MockDatabaseStorage{
+		store: make(map[int]Product),
+	}
 }
 
 // UpdatePrice method - Updates the product’s price.
@@ -127,14 +143,18 @@ func (i *Inventory) TotalValue() float64 {
 	return total
 }
 
-// Save method - Saves a to memory.
+// Save method - Saves a product to memory.
 func (m *MemoryStorage) Save(p Product) error {
+	m.Lock()
+	defer m.Unlock()
 	m.Products[p.ID] = p
 	return nil
 }
 
 // GetByID method - Retrieves a product by ID from memory.
 func (m *MemoryStorage) GetByID(id int) (*Product, error) {
+	m.Lock()
+	defer m.Unlock()
 	if p, ok := m.Products[id]; ok {
 		return &p, nil
 	}
@@ -143,6 +163,8 @@ func (m *MemoryStorage) GetByID(id int) (*Product, error) {
 
 // Delete method - Deletes a product by ID from memory.
 func (m *MemoryStorage) Delete(id int) error {
+	m.Lock()
+	defer m.Unlock()
 	if _, ok := m.Products[id]; !ok {
 		return ErrProductNotFound
 	}
@@ -150,7 +172,10 @@ func (m *MemoryStorage) Delete(id int) error {
 	return nil
 }
 
+// Save method - Saves a product to the mock database.
 func (mds *MockDatabaseStorage) Save(p Product) error {
+	mds.Lock()
+	defer mds.Unlock()
 	// Simulate database save with random delay
 	time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
 	if rand.Float32() < 0.1 {
@@ -160,7 +185,10 @@ func (mds *MockDatabaseStorage) Save(p Product) error {
 	return nil
 }
 
+// GetByID method - Retrieves a product by ID from the mock database.
 func (mds *MockDatabaseStorage) GetByID(id int) (*Product, error) {
+	mds.Lock()
+	defer mds.Unlock()
 	// Simulate database fetch with random delay
 	time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
 	if rand.Float32() < 0.1 {
@@ -172,7 +200,10 @@ func (mds *MockDatabaseStorage) GetByID(id int) (*Product, error) {
 	return nil, ErrProductNotFound
 }
 
+// Delete method - Deletes a product by ID from the mock database.
 func (mds *MockDatabaseStorage) Delete(id int) error {
+	mds.Lock()
+	defer mds.Unlock()
 	// Simulate database delete with random delay
 	time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
 	if rand.Float32() < 0.1 {
